@@ -3,7 +3,8 @@ load_dotenv()
 import os
 
 class Config():
-    BEARER_TOKEN = 'Bearer SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+    # BEARER_TOKEN = 'Bearer SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+    BEARER_TOKEN = os.getenv('BEARER_TOKEN')
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
 
