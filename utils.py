@@ -18,12 +18,19 @@ from langchain.llms import OpenAI
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Chroma
 
+from langchain.vectorstores.redis import Redis
+
+
+import redis
 
 import uuid
 config = Config()
 
 sampleData = './data/SamplePDF.pdf'
 sampleDataTxt = './data/SampleTxt.txt'
+
+# redisLocalHost = 'redis://localhost:6379'
+redisLocalHost = 'redis://127.0.0.1:6379'
 
 sampleChatHistory =  [{'sender': 'user', 'message': 'What is my name'}, {'sender': 'AI', 'message': 'Your name is Innocent.'}]
 template = """
@@ -77,6 +84,14 @@ def createMemoryChatHistory(chatHistory):
     return memory
 
 
+def use_load_qa_chain(memory, prompt, query, docs):
+    chain = load_qa_chain(OpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY), chain_type="stuff", memory=memory, prompt=prompt)
+    chain_output = chain({"input_documents":docs, "human_input": query })
+    print ('conversation history', chain.memory.buffer)
+    print (chain_output['output_text'])
+    return chain_output['output_text']
+
+# PINECONE
 
 def createIndex(path):
     texts = createChunkFromPdf(path)    
@@ -89,14 +104,6 @@ def createIndex(path):
     print (newIndexName)
     return newIndexName
 
-def use_load_qa_chain(memory, prompt, query, docs):
-    chain = load_qa_chain(OpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY), chain_type="stuff", memory=memory, prompt=prompt)
-    chain_output = chain({"input_documents":docs, "human_input": query })
-    print ('conversation history', chain.memory.buffer)
-    print (chain_output['output_text'])
-    return chain_output['output_text']
-
-
 def queryPineconeIndex(chatHistory, query, indexKey):
     memory = createMemoryChatHistory(chatHistory)
     pinecone.init(
@@ -107,6 +114,57 @@ def queryPineconeIndex(chatHistory, query, indexKey):
     return use_load_qa_chain(memory, prompt, query, docs)
 
 
+# REDDIS
+
+def createIndexFromRedis(path):
+    texts = createChunkFromPdf(path)
+    index_name = str(uuid.uuid1())
+    rds = Redis.from_documents(texts, embeddings, redis_url = redisLocalHost, index_name=index_name)
+    # rds.index_name
+    print (index_name)
+    return index_name
+
+def queryRedisIndex(indexName, query, chatHistory):
+    try:
+        rds = Redis.from_existing_index(embeddings, redis_url=redisLocalHost, index_name=indexName)
+        results = rds.similarity_search(query)
+        memory = createMemoryChatHistory(chatHistory)
+        return use_load_qa_chain(memory, prompt, query, results)
+    except Exception as e:
+        print (e)
+        print ('Index name does not exist')
+        return
+    
+    # retriever = rds.as_retriever()
+    # docs = retriever.get_relevant_documents(query)
+    # retriever = rds.as_retriever(search_type="similarity_limit")
+    # retriever.get_relevant_documents("where did ankush go to college?")
+    
+
+
+# CHROMA 
+
+def createIndexWithChroma(path):
+    texts = createChunkFromPdf(path)
+    new_index = str(uuid.uuid1())
+    persistent_directory = 'persistent/' + new_index
+    vectordb = Chroma.from_documents(documents=texts, embedding=embeddings, persist_directory=persistent_directory)
+    vectordb.persist()
+    vectordb = None
+    print (new_index)
+    return new_index
+
+def queryIndexWithChromaFromPersistent(indexKey, query, chatHistory):
+    persistent_path = 'persistent/' + indexKey
+    if (os.path.exists(persistent_path)):    
+        vectordb = Chroma(persist_directory=persistent_path, embedding_function=embeddings)
+        docs = vectordb.similarity_search(query)
+        memory = createMemoryChatHistory(chatHistory)
+        return use_load_qa_chain(memory, prompt, query, docs)
+    else:
+        print ('path does not exist')
+        return 'path does not exist'
+
 def queryIndexWithChroma(path, query, chatHistory):
     texts = createChunkFromPdf(path)
     embeddings = OpenAIEmbeddings()
@@ -115,6 +173,9 @@ def queryIndexWithChroma(path, query, chatHistory):
     memory = createMemoryChatHistory(chatHistory)
     return use_load_qa_chain(memory, prompt, query, docs)
     
+
+
+
 
 def delete_context(dirName):
     time.sleep(300)
@@ -141,7 +202,12 @@ def deleteAllData():
 
 
 if __name__ == '__main__':
+    print ('This is to check if docker is working')
     # createIndex(sampleData)
     # queryPineconeIndex(sampleChatHistory,'What is this document about?','a8ebbf9e-e8d7-11ed-83ea-20c19bff2da4')
-    queryIndexWithChroma(sampleData,"What is the document about?",sampleChatHistory)
+    # queryIndexWithChroma(sampleData,"What is the document about?",sampleChatHistory)
+    # createIndexFromRedis(sampleData)
+    # createIndexWithChroma(sampleData)
+    # queryIndexWithChromaFromPersistent('d2f62d6f-e9c5-11ed-b1b7-20c19bff2da41',"What is the document about",sampleChatHistory)
+    queryRedisIndex('1c973e4d-e9d5-11ed-9e82-20c19bff2da4',"What is the document about?",sampleChatHistory)
     # pass
