@@ -1,5 +1,6 @@
 import requests
 from config import Config
+# import urllib.parse
 
 graph_url = 'https://graph.facebook.com/v16.0'
 config = Config()
@@ -21,9 +22,11 @@ def getPSIDAndConversationID(page_id, page_token):
     return (response.json())
 
 def sendCustomerAMessage(page_id,response,page_token,psid):
+    new_response = response.replace("'",r"\'")
+    print ('this is the new response', new_response)
     url = f"https://graph.facebook.com/v14.0/{page_id}/messages\
 ?recipient={{id:{psid}}}\
-&message={{text:'{response}'}}\
+&message={{text:'{new_response}'}}\
 &messaging_type=RESPONSE\
 &access_token={page_token}"
     print (url)
@@ -70,5 +73,5 @@ def getListOfAllMessageTextInConversation(conversation_id,page_token):
 
 if __name__ == '__main__':
     # findConversationWithASpecificUser(config.PAGE_ID,config.SENDER_ID,config.PAGE_ACCESS_TOKEN)
-    # sendCustomerAMessage(config.PAGE_ID,"test response",config.PAGE_ACCESS_TOKEN,config.SENDER_ID)
-    pass
+    sendCustomerAMessage(config.PAGE_ID,"test response",config.PAGE_ACCESS_TOKEN,config.SENDER_ID)
+    # pass

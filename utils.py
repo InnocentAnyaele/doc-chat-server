@@ -204,5 +204,5 @@ def deleteAllData():
 
 
 if __name__ == '__main__':
-    print ('yupp!!')
+    # queryIndexWithChromaFromPersistent(config.HARDCODED_INDEX_KEY,'What is the document about?',[])
     pass
