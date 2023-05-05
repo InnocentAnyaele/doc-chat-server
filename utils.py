@@ -43,6 +43,8 @@ template = """
     {chat_history}
     Human: {human_input}
     Chatbot:"""
+    
+    
 prompt = PromptTemplate(
         input_variables=["chat_history", "human_input", "context"],
         template=template
@@ -95,8 +97,8 @@ def use_load_qa_chain(memory, prompt, query, docs):
 
 def createIndex(path):
     texts = createChunkFromPdf(path)    
-    pinecone.init(
     api_key = config.PINECONE_API_KEY,
+    pinecone.init(
     environment = 'us-west1-gcp-free')
     newIndexName = str(uuid.uuid1())
     pinecone.create_index(newIndexName, dimension=1536, metric='cosine')
@@ -202,12 +204,5 @@ def deleteAllData():
 
 
 if __name__ == '__main__':
-    print ('This is to check if docker is working')
-    # createIndex(sampleData)
-    # queryPineconeIndex(sampleChatHistory,'What is this document about?','a8ebbf9e-e8d7-11ed-83ea-20c19bff2da4')
-    # queryIndexWithChroma(sampleData,"What is the document about?",sampleChatHistory)
-    # createIndexFromRedis(sampleData)
-    # createIndexWithChroma(sampleData)
-    # queryIndexWithChromaFromPersistent('d2f62d6f-e9c5-11ed-b1b7-20c19bff2da41',"What is the document about",sampleChatHistory)
-    queryRedisIndex('1c973e4d-e9d5-11ed-9e82-20c19bff2da4',"What is the document about?",sampleChatHistory)
-    # pass
+    print ('yupp!!')
+    pass
