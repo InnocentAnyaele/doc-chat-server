@@ -1,32 +1,8 @@
 # doc-chat-server
 
-<!-- Copy and paste the converted output. -->
-
-<!-----
-
-Yay, no errors, warnings, or alerts!
-
-Conversion time: 0.629 seconds.
-
-
-Using this Markdown file:
-
-1. Paste this output into your source file.
-2. See the notes and action items below regarding this conversion run.
-3. Check the rendered output (headings, lists, code blocks, tables) for proper
-   formatting and use a linkchecker before you publish this page.
-
-Conversion notes:
-
-* Docs to Markdown version 1.0β34
-* Sat May 06 2023 06:18:05 GMT-0700 (PDT)
-* Source doc: Apex Chat ReadME
------>
-
-
 **About the project**
 
-Think about a business whose data can be fed into ChatGPT's LLM so that their chatbot can fully engage clients' queries and concerns.
+Think about a business whose data can be fed into ChatGPT's LLM so that their ichatbot can fully engage clients' queries and concerns through instagram message.
 
 This project creates a vector storage of dummy business data using Langchain & Chroma DB (also has support for Redis and Pinecone) so that they can be queried with OpenAI’s LLM to return a response. It converts the data into text chunks which as stored on the disk as vectors (using Chroma db)
 
@@ -34,7 +10,7 @@ See Langchain & Chroma db documentation here
 
 [Chroma — 🦜🔗 LangChain 0.0.157](https://python.langchain.com/en/latest/modules/indexes/vectorstores/examples/chroma.html)
 
-When a customer messages the business’s Instagram page
+When a customer messages the business' Instagram page
 
 1. A webhook is sent to the Flask server
 
