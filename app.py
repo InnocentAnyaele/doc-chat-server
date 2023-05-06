@@ -36,7 +36,7 @@ def create_app(config = DevelopmentConfig()):
 
     @app.route('/')
     def index():
-        print ('hello world')
+        # print ('hello world')
         return "Hello, World"
 
 
@@ -69,15 +69,15 @@ def create_app(config = DevelopmentConfig()):
                     indexKey = createIndex(path_to_pdf)
                     response = make_response(indexKey)
                     response.status_code = 200
-                    print (indexKey)
+                    # print (indexKey)
                     return response
                 else:
                     response = make_response(extension , 'is not accepted')
                     response.status_code = 400
-                    print (extension, 'is not accepted')
+                    # print (extension, 'is not accepted')
                     return (response)
             except Exception as e:
-                print (e)
+                # print (e)
                 response = make_response('Something went wrong')
                 response.status_code = 500
                 return response
@@ -94,21 +94,21 @@ def create_app(config = DevelopmentConfig()):
                 chatHistory = json.loads(request.form['chatHistory'])
                 
                 
-                print ('this is the index key',indexKey)
-                print ('this is the chat history',chatHistory)
-                print (chatHistory[0])
-                print (chatHistory[0]['sender'])
-                print (chatHistory[0]['message'])
+                # print ('this is the index key',indexKey)
+                # print ('this is the chat history',chatHistory)
+                # print (chatHistory[0])
+                # print (chatHistory[0]['sender'])
+                # print (chatHistory[0]['message'])
                 
                 output = queryPineconeIndex(chatHistory,query,indexKey)
                 
                 response = make_response(output)
                 response.status_code = 200
-                print (output)
+                # print (output)
                 return response
                 
             except Exception as e:
-                print (e)
+                # print (e)
                 response = make_response('Something went wrong')
                 response.status_code = 500
                 return response
@@ -128,33 +128,32 @@ def create_app(config = DevelopmentConfig()):
     @app.route('/webhook/messaging-webhook', methods=['GET','POST'])
     def messagingWebhook():
         if request.method == 'GET':
-            print ('reached the messaging webhook')
+            # print ('reached the messaging webhook')
             mode = request.args.get('hub.mode')
             token = request.args.get('hub.verify_token')
             challenge = request.args.get('hub.challenge')
 
             if mode and token:
                 if mode == 'subscribe' and token == app.config['VERIFY_TOKEN']:
-                    print('WEBHOOK_VERIFIED')
+                    # print('WEBHOOK_VERIFIED')
                     return make_response(challenge,200)
                 else:
                     return make_response('',403)
             else:
-                print ('Got webhook but without parameters')
+                # print ('Got webhook but without parameters')
                 return
         if request.method == 'POST':
-            print ('reached the webhook')
+            # print ('reached the webhook')
             body = request.get_json()
-            print (body)
+            # print (body)
             entry = body['entry']
-            print (entry)
-            print (entry[0])
+            # print (entry)
+            # print (entry[0])
             
             try:
                 if body['object'] == 'instagram':
-                    print ('Event received')
+                    # print ('Event received')
                     for output in entry:
-                        print ('this is the output messaging')
                         output_message =  output['messaging'][0]
                         sender_id = output_message['sender']['id']
                         recipient_id = output_message['recipient']['id']
@@ -163,10 +162,10 @@ def create_app(config = DevelopmentConfig()):
                         conversation_id = findConversationWithASpecificUser(app.config['PAGE_ID'],sender_id,app.config['PAGE_ACCESS_TOKEN'])
                         chatHistory = getListOfAllMessageTextInConversation(conversation_id,app.config['PAGE_ACCESS_TOKEN'])
                         output = queryIndexWithChromaFromPersistent(app.config['HARDCODED_INDEX_KEY'],message_text,chatHistory)
-                        print ('sender ID', sender_id)
-                        print ('recipient ID', recipient_id)
-                        print (message_text)
-                        print ('this is the AI response', output)
+                        # print ('sender ID', sender_id)
+                        # print ('recipient ID', recipient_id)
+                        # print (message_text)
+                        # print ('this is the AI response', output)
                         sendCustomerAMessage(app.config['PAGE_ID'],output,app.config['PAGE_ACCESS_TOKEN'],sender_id)
                     return make_response('EVENT_RECEIVED', 200)
                 else:

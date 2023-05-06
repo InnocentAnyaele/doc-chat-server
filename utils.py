@@ -26,8 +26,9 @@ import redis
 import uuid
 config = Config()
 
-sampleData = './data/SamplePDF.pdf'
+# sampleData = './data/SamplePDF.pdf'
 sampleDataTxt = './data/SampleTxt.txt'
+sampleData = './data/Apex Chat Sample Business Data.pdf'
 
 # redisLocalHost = 'redis://localhost:6379'
 redisLocalHost = 'redis://127.0.0.1:6379'
@@ -61,7 +62,7 @@ def createChunkFromPdf(path):
     # text_splitter = CharacterTextSplitter(chunk_size=50, chunk_overlap=0)
     texts = text_splitter.split_documents(data)
     # print (f'Now you have {len(texts)} documents')
-    print (texts)
+    # print (texts)
     return texts
 
 def createChunkFromTxt(path):
@@ -69,7 +70,7 @@ def createChunkFromTxt(path):
         data = f.read()
     text_splitter = CharacterTextSplitter(chunk_size=50, chunk_overlap=0)
     texts = text_splitter.split_text(data)
-    print (texts)
+    # print (texts)
     return texts
 
 
@@ -89,8 +90,8 @@ def createMemoryChatHistory(chatHistory):
 def use_load_qa_chain(memory, prompt, query, docs):
     chain = load_qa_chain(OpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY), chain_type="stuff", memory=memory, prompt=prompt)
     chain_output = chain({"input_documents":docs, "human_input": query })
-    print ('conversation history', chain.memory.buffer)
-    print (chain_output['output_text'])
+    # print ('conversation history', chain.memory.buffer)
+    # print (chain_output['output_text'])
     return chain_output['output_text']
 
 # PINECONE
@@ -103,7 +104,7 @@ def createIndex(path):
     newIndexName = str(uuid.uuid1())
     pinecone.create_index(newIndexName, dimension=1536, metric='cosine')
     Pinecone.from_texts([t.page_content for t in texts], embeddings, index_name=newIndexName)
-    print (newIndexName)
+    # print (newIndexName)
     return newIndexName
 
 def queryPineconeIndex(chatHistory, query, indexKey):
@@ -123,7 +124,7 @@ def createIndexFromRedis(path):
     index_name = str(uuid.uuid1())
     rds = Redis.from_documents(texts, embeddings, redis_url = redisLocalHost, index_name=index_name)
     # rds.index_name
-    print (index_name)
+    # print (index_name)
     return index_name
 
 def queryRedisIndex(indexName, query, chatHistory):
@@ -133,9 +134,9 @@ def queryRedisIndex(indexName, query, chatHistory):
         memory = createMemoryChatHistory(chatHistory)
         return use_load_qa_chain(memory, prompt, query, results)
     except Exception as e:
-        print (e)
-        print ('Index name does not exist')
-        return
+        # print (e)
+        # print ('Index name does not exist')
+        return (e)
     
     # retriever = rds.as_retriever()
     # docs = retriever.get_relevant_documents(query)
@@ -153,7 +154,7 @@ def createIndexWithChroma(path):
     vectordb = Chroma.from_documents(documents=texts, embedding=embeddings, persist_directory=persistent_directory)
     vectordb.persist()
     vectordb = None
-    print (new_index)
+    # print (new_index)
     return new_index
 
 def queryIndexWithChromaFromPersistent(indexKey, query, chatHistory):
@@ -164,7 +165,7 @@ def queryIndexWithChromaFromPersistent(indexKey, query, chatHistory):
         memory = createMemoryChatHistory(chatHistory)
         return use_load_qa_chain(memory, prompt, query, docs)
     else:
-        print ('path does not exist')
+        # print ('path does not exist')
         return 'path does not exist'
 
 def queryIndexWithChroma(path, query, chatHistory):
@@ -184,7 +185,7 @@ def delete_context(dirName):
     if os.path.exists(dirName):
         shutil.rmtree(dirName)
     else:
-        print('Path does not exist')
+        return ('Path does not exist')
         
     return 'completed'
 
@@ -205,4 +206,5 @@ def deleteAllData():
 
 if __name__ == '__main__':
     # queryIndexWithChromaFromPersistent(config.HARDCODED_INDEX_KEY,'What is the document about?',[])
+    # createIndexWithChroma(sampleData)
     pass
