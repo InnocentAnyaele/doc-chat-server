@@ -2,7 +2,7 @@
 
 **About the project**
 
-Think about a business whose data can be fed into ChatGPT's LLM so that their ichatbot can fully engage clients' queries and concerns through instagram message.
+Think about a business whose data can be fed into ChatGPT's LLM so that their chatbot can fully engage clients' queries and concerns through instagram message.
 
 This project creates a vector storage of dummy business data using Langchain & Chroma DB (also has support for Redis and Pinecone) so that they can be queried with OpenAI’s LLM to return a response. It converts the data into text chunks which as stored on the disk as vectors (using Chroma db)
 
