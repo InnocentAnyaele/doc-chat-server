@@ -147,31 +147,51 @@ def create_app(config = DevelopmentConfig()):
             body = request.get_json()
             # print (body)
             entry = body['entry']
-            # print (entry)
+            print ('webhook entry', entry)
             # print (entry[0])
             
             try:
                 if body['object'] == 'instagram':
                     # print ('Event received')
                     for output in entry:
-                        output_message =  output['messaging'][0]
+                        output_message = output['messaging'][0]
                         sender_id = output_message['sender']['id']
                         recipient_id = output_message['recipient']['id']
+                        message = output_message['message']
                         message_text = output_message['message']['text']
+                        # print ('reached parsing the entry')
+                        # print ('sender ID', sender_id)
+                        # print ('recipient ID', recipient_id)
+                        print ('messsage_text', message_text)
+                        
+                        #check for quick reply in message
+                        if "quick_reply" in message:
+                            quick_reply_payload = message['quick_reply']['payload']
+                            print ('Quick reply', quick_reply_payload)
+                        else:
+                            print ('no quick reply')
+                            
                         
                         conversation_id = findConversationWithASpecificUser(app.config['PAGE_ID'],sender_id,app.config['PAGE_ACCESS_TOKEN'])
                         chatHistory = getListOfAllMessageTextInConversation(conversation_id,app.config['PAGE_ACCESS_TOKEN'])
                         output = queryIndexWithChromaFromPersistent(app.config['HARDCODED_INDEX_KEY'],message_text,chatHistory)
-                        # print ('sender ID', sender_id)
-                        # print ('recipient ID', recipient_id)
-                        # print (message_text)
-                        # print ('this is the AI response', output)
-                        sendCustomerAMessage(app.config['PAGE_ID'],output,app.config['PAGE_ACCESS_TOKEN'],sender_id)
+                        print ('this is the AI response', output)
+                        
+                        #process response
+                        def process_response():
+                            if output[0] == '{':
+                                json_order = json.loads(output)
+                                print ('JSON Order', json_order)
+                                payment_response = "Order sent. You can either pay to our bank. Name: Montado (pvt) ltd, Account : 047010020567, Bank: HNB Biyagama or you can pay through our website. Kindly use your name as reference and send a picture of your receipt"
+                                sendCustomerAMessage(app.config['PAGE_ID'],payment_response,app.config['PAGE_ACCESS_TOKEN'],sender_id)
+                            else:
+                                sendCustomerAMessage(app.config['PAGE_ID'],output,app.config['PAGE_ACCESS_TOKEN'],sender_id)
+                        process_response()
                     return make_response('EVENT_RECEIVED', 200)
                 else:
                     return make_response('',404)
             except Exception as e:
-                print (e)
+                print ('caught exception', e)
                 return make_response('',500)
             
                        

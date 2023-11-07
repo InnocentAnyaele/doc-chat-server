@@ -4,7 +4,6 @@ import shutil
 import threading
 from config import Config
 import json
-
 from langchain.document_loaders import UnstructuredPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter, CharacterTextSplitter
 from langchain.embeddings.openai import OpenAIEmbeddings
@@ -14,38 +13,45 @@ from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain.chains.question_answering import load_qa_chain
 from langchain.llms import OpenAI
-
+from langchain.chat_models import ChatOpenAI
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Chroma
-
 from langchain.vectorstores.redis import Redis
-
-
 import redis
-
 import uuid
 config = Config()
 
 # sampleData = './data/SamplePDF.pdf'
-sampleDataTxt = './data/SampleTxt.txt'
-sampleData = './data/Apex Chat Sample Business Data.pdf'
+# sampleDataTxt = './data/SampleTxt.txt'
+# sampleData = './data/Apex Chat Sample Business Data.pdf'
+sampleData = './data/Coffee.pdf'
 
 # redisLocalHost = 'redis://localhost:6379'
 redisLocalHost = 'redis://127.0.0.1:6379'
 
 sampleChatHistory =  [{'sender': 'user', 'message': 'What is my name'}, {'sender': 'AI', 'message': 'Your name is Innocent.'}]
+# template = """
+#     You are a Coffee business having a conversation with a client.
+#     Given the following extracted parts of your business data and question, give a response.
+#     {context}
+#     {chat_history}
+#     Human: {human_input}
+#     Chatbot:"""
+    
+#prompt template    
 template = """
-    You are a chatbot having a conversation with a human.
-
-    Given the following extracted parts of a long document and a question, create a final answer.
-
-    {context}
-
-    {chat_history}
+    You are a Coffee business having a conversation with a client. Given extracted context from business data and conversation history, provide support to any questions the client may have. 
+    
+    If the client wants to place an order get the following details; Name, Primary Contact, Secondary Contact, Delivery Address. 
+    
+    If an order is placed with all the details respond only with a json of the order details with the keys name, contact1, contact2, address
+    
+    Previous Conversation: {chat_history}    
+    Business Information: {context}
     Human: {human_input}
     Chatbot:"""
     
-    
+#prompt template
 prompt = PromptTemplate(
         input_variables=["chat_history", "human_input", "context"],
         template=template
@@ -80,15 +86,22 @@ def createMemoryChatHistory(chatHistory):
         chat_message = chat['message']
         chat_sender = chat['sender']
         if chat_sender != 'system':     
-            if chat['sender'] == 'AI':
-                memory.chat_memory.add_ai_message(chat_message)
-            else:
+            # if chat['sender'] == 'AI':
+            #     memory.chat_memory.add_ai_message(chat_message)
+            # else:
+            #     memory.chat_memory.add_user_message(chat_message)
+            if chat['sender'] == 'human':
                 memory.chat_memory.add_user_message(chat_message)
+            else:
+                memory.chat_memory.add_ai_message(chat_message)
+                
+                
     return memory
 
-
+#use chain
 def use_load_qa_chain(memory, prompt, query, docs):
-    chain = load_qa_chain(OpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY), chain_type="stuff", memory=memory, prompt=prompt)
+    # chain = load_qa_chain(OpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY, model_name="gpt-3.5-turbo-16k"), chain_type="stuff", memory=memory, prompt=prompt)
+    chain = load_qa_chain(ChatOpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY, model_name="gpt-3.5-turbo-16k"), chain_type="stuff", memory=memory, prompt=prompt)
     chain_output = chain({"input_documents":docs, "human_input": query })
     # print ('conversation history', chain.memory.buffer)
     # print (chain_output['output_text'])
@@ -144,7 +157,6 @@ def queryRedisIndex(indexName, query, chatHistory):
     # retriever.get_relevant_documents("where did ankush go to college?")
     
 
-
 # CHROMA 
 
 def createIndexWithChroma(path):
@@ -158,15 +170,19 @@ def createIndexWithChroma(path):
     return new_index
 
 def queryIndexWithChromaFromPersistent(indexKey, query, chatHistory):
-    persistent_path = 'persistent/' + indexKey
-    if (os.path.exists(persistent_path)):    
-        vectordb = Chroma(persist_directory=persistent_path, embedding_function=embeddings)
-        docs = vectordb.similarity_search(query)
-        memory = createMemoryChatHistory(chatHistory)
-        return use_load_qa_chain(memory, prompt, query, docs)
-    else:
-        # print ('path does not exist')
-        return 'path does not exist'
+    try:
+        persistent_path = 'persistent/' + indexKey
+        if (os.path.exists(persistent_path)):    
+            vectordb = Chroma(persist_directory=persistent_path, embedding_function=embeddings)
+            docs = vectordb.similarity_search(query)
+            memory = createMemoryChatHistory(chatHistory)
+            return use_load_qa_chain(memory, prompt, query, docs)
+        else:
+            # print ('path does not exist')
+            return 'path does not exist'
+    except Exception as e:
+        print ('queryIndexWithChromaFromPersistent exception', e)
+        raise
 
 def queryIndexWithChroma(path, query, chatHistory):
     texts = createChunkFromPdf(path)
@@ -175,10 +191,6 @@ def queryIndexWithChroma(path, query, chatHistory):
     docs = docsearch.similarity_search(query)
     memory = createMemoryChatHistory(chatHistory)
     return use_load_qa_chain(memory, prompt, query, docs)
-    
-
-
-
 
 def delete_context(dirName):
     time.sleep(300)
@@ -205,6 +217,6 @@ def deleteAllData():
 
 
 if __name__ == '__main__':
-    # queryIndexWithChromaFromPersistent(config.HARDCODED_INDEX_KEY,'What is the document about?',[])
-    # createIndexWithChroma(sampleData)
-    pass
+    # print(queryIndexWithChromaFromPersistent(config.HARDCODED_INDEX_KEY,'I would want to place an order for coffee?',[]))
+    createIndexWithChroma(sampleData)
+    # pass

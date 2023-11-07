@@ -14,7 +14,8 @@ class Config():
     CONVERSATION_ID = os.getenv('CONVERSATION_ID')
     USER_ACCESS_TOKEN = os.getenv('USER_ACCESS_TOKEN')
     PAGE_ACCESS_TOKEN = os.getenv('PAGE_ACCESS_TOKEN')
-    HARDCODED_INDEX_KEY = 'bb02481f-eb66-11ed-9c16-20c19bff2da0'
+    # HARDCODED_INDEX_KEY = 'bb02481f-eb66-11ed-9c16-20c19bff2da0'
+    HARDCODED_INDEX_KEY = 'db9555b3-7cd6-11ee-ac8f-20c19bff2da4'
     APP_ID = os.getenv('APP_ID')
     APP_SECRET = os.getenv('APP_SECRET')
 
