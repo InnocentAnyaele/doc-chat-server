@@ -1,7 +1,5 @@
 # doc-chat-server
 
-![Screenshot_20230727-160244](https://github.com/InnocentAnyaele/doc-chat-server/assets/55434969/87eae2e3-aff9-4266-99dd-77f3acdf9fc9)
-
 **About the project**
 
 Think about a business whose data can be fed into ChatGPT's LLM so that their chatbot can fully engage clients' queries and concerns through instagram message.
