@@ -145,7 +145,7 @@ def create_app(config = DevelopmentConfig()):
         if request.method == 'POST':
             # print ('reached the webhook')
             body = request.get_json()
-            # print (body)
+            print ('this is the body',body)
             entry = body['entry']
             print ('webhook entry', entry)
             # print (entry[0])
