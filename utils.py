@@ -17,6 +17,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.vectorstores.redis import Redis
+from langchain.callbacks import get_openai_callback
 import redis
 import uuid
 config = Config()
@@ -40,7 +41,7 @@ sampleChatHistory =  [{'sender': 'user', 'message': 'What is my name'}, {'sender
     
 #prompt template    
 template = """
-    You are a Coffee business having a conversation with a client. Given extracted context from business data and conversation history, provide support to any questions the client may have. 
+    You are an AI assistant for a business that sells coffee paste. Given extracted context from business data and conversation history, provide support to any questions customers may have. Only provide information related to the business.
     
     If the client wants to place an order get the following details; Name, Primary Contact, Secondary Contact, Delivery Address. 
     
@@ -50,6 +51,7 @@ template = """
     Business Information: {context}
     Human: {human_input}
     Chatbot:"""
+
     
 #prompt template
 prompt = PromptTemplate(
@@ -57,6 +59,19 @@ prompt = PromptTemplate(
         template=template
     )
 embeddings = OpenAIEmbeddings(openai_api_key=config.OPENAI_API_KEY)
+
+#use chain
+def use_load_qa_chain(memory, prompt, query, docs):
+    with get_openai_callback() as cb:
+        # chain = load_qa_chain(OpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY, model_name="gpt-3.5-turbo-16k"), chain_type="stuff", memory=memory, prompt=prompt)
+        chain = load_qa_chain(ChatOpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY, model_name="gpt-3.5-turbo"), chain_type="stuff", memory=memory, prompt=prompt, verbose=True)
+        chain_output = chain({"input_documents":docs, "human_input": query}, return_only_outputs=False)
+        # print ('conversation history', chain.memory.buffer)
+    
+        # Print the entire chain information
+        # print('Chain information:', chain_output)
+        print('callback info', cb)
+        return chain_output['output_text']
 
 
 def createChunkFromPdf(path):
@@ -98,14 +113,6 @@ def createMemoryChatHistory(chatHistory):
                 
     return memory
 
-#use chain
-def use_load_qa_chain(memory, prompt, query, docs):
-    # chain = load_qa_chain(OpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY, model_name="gpt-3.5-turbo-16k"), chain_type="stuff", memory=memory, prompt=prompt)
-    chain = load_qa_chain(ChatOpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY, model_name="gpt-3.5-turbo-16k"), chain_type="stuff", memory=memory, prompt=prompt)
-    chain_output = chain({"input_documents":docs, "human_input": query })
-    # print ('conversation history', chain.memory.buffer)
-    # print (chain_output['output_text'])
-    return chain_output['output_text']
 
 # PINECONE
 
