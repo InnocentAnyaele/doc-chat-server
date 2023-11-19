@@ -5,9 +5,10 @@ import os
 import uuid
 from werkzeug.utils import secure_filename
 from utils import createIndex, checkExtension, startDeleteThread, queryPineconeIndex, queryIndexWithChromaFromPersistent
-from fb import findConversationWithASpecificUser, getListOfAllMessageTextInConversation, sendCustomerAMessage
+from fb import findConversationWithASpecificUser, getListOfAllMessageTextInConversation, sendCustomerAMessage, getListOfAllMessagesInConversation
 from flask_cors import CORS
 import json
+import random
 
 
 def create_app(config = DevelopmentConfig()):
@@ -167,27 +168,73 @@ def create_app(config = DevelopmentConfig()):
                         #check for quick reply in message
                         if "quick_reply" in message:
                             quick_reply_payload = message['quick_reply']['payload']
-                            print ('Quick reply', quick_reply_payload)
+                            print ('quick reply payload', quick_reply_payload)
+                            quick_reply_payload = quick_reply_payload.replace("'",'"')
+                            quick_reply_payload = json.loads(quick_reply_payload)
+                            print ('checking json', quick_reply_payload)
+                            print ('checking json', quick_reply_payload["type"])
+                            if quick_reply_payload["type"] == 'confirm_order':
+                                    orderID = quick_reply_payload['order']['orderID']
+                                    orderConfirmedResponse = f"Your order has been placed with the id of {orderID}. Select your payment method"
+                                    ai_payload = {
+                                        "type": 'pay_with_ai',
+                                        "order": quick_reply_payload['order'], 
+                                    }
+                                    website_payload = {
+                                        "type": 'pay_with_web',
+                                        "order": quick_reply_payload['order'], 
+                                    }
+                                    quick_reply = [{
+                                        "content_type": "text",
+                                        "title": f"Pay with AI",
+                                        "payload": f"{ai_payload}"
+                                    },     {
+                                        "content_type": "text",
+                                        "title": f"Pay through website",
+                                        "payload": f"{website_payload}"
+                                    }]
+                                    sendCustomerAMessage(app.config['PAGE_ID'],orderConfirmedResponse,app.config['PAGE_ACCESS_TOKEN'],sender_id,quick_reply)
+                            if quick_reply_payload['type'] == 'pay_with_ai':
+                                orderID = quick_reply_payload['order']['orderID']
+                                pay_with_ai_response = f"Pay through our bank with the reference {orderID} and send a screenshot of your payment. Bank details are NAME - Montado (pvt) ltd, ACCOUNT - 047010020567, BANK - HNB Biyagama."
+                                sendCustomerAMessage(app.config['PAGE_ID'],pay_with_ai_response,app.config['PAGE_ACCESS_TOKEN'],sender_id)
+                            if quick_reply_payload['type'] == 'pay_with_web':
+                                pay_with_web_response = "Pay through our website example.com"
+                                sendCustomerAMessage(app.config['PAGE_ID'],pay_with_web_response,app.config['PAGE_ACCESS_TOKEN'],sender_id)                                
                         else:
-                            print ('no quick reply')
+                            print ('no quick reply')                            
+                            conversation_id = findConversationWithASpecificUser(app.config['PAGE_ID'],sender_id,app.config['PAGE_ACCESS_TOKEN'])
+                            chatHistory = getListOfAllMessageTextInConversation(conversation_id,app.config['PAGE_ACCESS_TOKEN'])
+                            # chatHistory = getListOfAllMessagesInConversation(conversation_id,app.config['PAGE_ACCESS_TOKEN'])
+                            output = queryIndexWithChromaFromPersistent(app.config['HARDCODED_INDEX_KEY'],message_text,chatHistory)
+                            print ('this is the AI response', output)
                             
-                        
-                        conversation_id = findConversationWithASpecificUser(app.config['PAGE_ID'],sender_id,app.config['PAGE_ACCESS_TOKEN'])
-                        chatHistory = getListOfAllMessageTextInConversation(conversation_id,app.config['PAGE_ACCESS_TOKEN'])
-                        output = queryIndexWithChromaFromPersistent(app.config['HARDCODED_INDEX_KEY'],message_text,chatHistory)
-                        print ('this is the AI response', output)
-                        
-                        #process response
-                        def process_response():
-                            if output[0] == '{':
-                                json_order = json.loads(output)
-                                print ('JSON Order', json_order)
-                                payment_response = "Order sent. You can either pay to our bank. Name: Montado (pvt) ltd, Account : 047010020567, Bank: HNB Biyagama or you can pay through our website. Kindly use your name as reference and send a picture of your receipt"
-                                sendCustomerAMessage(app.config['PAGE_ID'],payment_response,app.config['PAGE_ACCESS_TOKEN'],sender_id)
-                            else:
-                                sendCustomerAMessage(app.config['PAGE_ID'],output,app.config['PAGE_ACCESS_TOKEN'],sender_id)
-                        process_response()
-                    return make_response('EVENT_RECEIVED', 200)
+                            #process response
+                            def process_response():
+                                if output[0] == '{':
+                                    json_order = json.loads(output)
+                                    orderID = random.randint(100000, 999999)
+                                    json_order["orderID"] = orderID
+                                    print ('JSON Order', json_order)
+                                    order_response = f"Kindly select the reply to confirm your order."
+                                    #temporary save order ID and order data - with status of confirmed
+                                    # payment_response = "Order sent. Your order ID is 18732. You can either pay to our bank or website (example.com). Bank details are NAME - Montado (pvt) ltd, ACCOUNT - 047010020567, BANK - HNB Biyagama. Kindly use your ID as reference."
+                                    payload = {
+                                        "type": "confirm_order",
+                                        "order": json_order
+                                    }
+                                    quick_reply = [
+                                                {
+                                                    "content_type": "text",
+                                                    "title": f"Confirm order",
+                                                    "payload": f"{payload}"
+                                                }
+                                            ]
+                                    sendCustomerAMessage(app.config['PAGE_ID'],order_response,app.config['PAGE_ACCESS_TOKEN'],sender_id,quick_reply)
+                                else:
+                                    sendCustomerAMessage(app.config['PAGE_ID'],output,app.config['PAGE_ACCESS_TOKEN'],sender_id)
+                            process_response()
+                        return make_response('EVENT_RECEIVED', 200)
                 else:
                     return make_response('',404)
             except Exception as e:

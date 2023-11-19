@@ -40,12 +40,25 @@ sampleChatHistory =  [{'sender': 'user', 'message': 'What is my name'}, {'sender
 #     Chatbot:"""
     
 #prompt template    
+# template = """
+#     You are an AI assistant for a business that sells coffee paste. Given extracted context from business data and conversation history, provide support to any questions customers may have. Only provide information related to the business.
+    
+#     Here are some workflows to keep in mind
+#     If the client wants to place an order get the following details; Name, Flavour, Quantity, Primary Contact, Secondary Contact, Delivery Address. 
+    # If an order is placed with all the details provided respond only with a json of the order details with the keys name, flavour, quantity, contact1, contact2, address
+#     If the client is confirming their order, respond only with the code ORDERCONFIRMATION and a json of the order details 
+    
+#     Previous Conversation: {chat_history}    
+#     Business Information: {context}
+#     Human: {human_input}
+#     Chatbot:"""
+    
 template = """
-    You are an AI assistant for a business that sells coffee paste. Given extracted context from business data and conversation history, provide support to any questions customers may have. Only provide information related to the business.
+    You are an AI assistant for a business specializing in coffee paste. Your primary goal is to provide support and assistance to customers based on extracted context from business data and conversation history. Focus on delivering accurate and relevant information related to the business. Do not generate answers that are not supported by the provided business context.
     
-    If the client wants to place an order get the following details; Name, Primary Contact, Secondary Contact, Delivery Address. 
+    If the client expresses an intention to place an order, guide them to provide the following details: Name, Flavour, Quantity, Primary Contact, Secondary Contact, Delivery Address
     
-    If an order is placed with all the details respond only with a json of the order details with the keys name, contact1, contact2, address
+    If a recent order has been placed with all required details, your response should only strictly be a json with the order "name", "flavour", "quantity", "contact1", "contact2", "address"
     
     Previous Conversation: {chat_history}    
     Business Information: {context}
@@ -63,8 +76,16 @@ embeddings = OpenAIEmbeddings(openai_api_key=config.OPENAI_API_KEY)
 #use chain
 def use_load_qa_chain(memory, prompt, query, docs):
     with get_openai_callback() as cb:
+        # models
+        # gpt-4-1106-preview
+        # gpt-4
+        # gpt-4-32k
+        # gpt-4-0613
+        # gpt-4-32k-0613
+        # gpt-3.5-turbo-16k
+        # gpt-3.5-turbo
         # chain = load_qa_chain(OpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY, model_name="gpt-3.5-turbo-16k"), chain_type="stuff", memory=memory, prompt=prompt)
-        chain = load_qa_chain(ChatOpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY, model_name="gpt-3.5-turbo"), chain_type="stuff", memory=memory, prompt=prompt, verbose=True)
+        chain = load_qa_chain(ChatOpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY, model_name="gpt-4"), chain_type="stuff", memory=memory, prompt=prompt, verbose=True)
         chain_output = chain({"input_documents":docs, "human_input": query}, return_only_outputs=False)
         # print ('conversation history', chain.memory.buffer)
     
@@ -100,15 +121,20 @@ def createMemoryChatHistory(chatHistory):
     for chat in chatHistory:
         chat_message = chat['message']
         chat_sender = chat['sender']
-        if chat_sender != 'system':     
-            # if chat['sender'] == 'AI':
-            #     memory.chat_memory.add_ai_message(chat_message)
-            # else:
-            #     memory.chat_memory.add_user_message(chat_message)
-            if chat['sender'] == 'human':
+        if chat_sender == 'human':
                 memory.chat_memory.add_user_message(chat_message)
-            else:
-                memory.chat_memory.add_ai_message(chat_message)
+        else:
+            memory.chat_memory.add_ai_message(chat_message)
+            memory.chat_memory.messages
+        # if chat_sender != 'system':     
+        #     # if chat['sender'] == 'AI':
+        #     #     memory.chat_memory.add_ai_message(chat_message)
+        #     # else:
+        #     #     memory.chat_memory.add_user_message(chat_message)
+        #     if chat['sender'] == 'human':
+        #         memory.chat_memory.add_user_message(chat_message)
+        #     else:
+        #         memory.chat_memory.add_ai_message(chat_message)
                 
                 
     return memory

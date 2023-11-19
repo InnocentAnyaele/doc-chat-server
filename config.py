@@ -9,12 +9,13 @@ class Config():
     PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
     VERIFY_TOKEN = os.getenv('VERIFY_TOKEN')
     SENDER_ID = os.getenv('SENDER_ID')
+    INSTAGRAM_ID = os.getenv('INSTAGRAM_ID')
     PAGE_ID = os.getenv('PAGE_ID')
     USER_ID = os.getenv('USER_ID')
     CONVERSATION_ID = os.getenv('CONVERSATION_ID')
     USER_ACCESS_TOKEN = os.getenv('USER_ACCESS_TOKEN')
     PAGE_ACCESS_TOKEN = os.getenv('PAGE_ACCESS_TOKEN')
-    HARDCODED_INDEX_KEY = '5ba6bb4c-846e-11ee-8922-20c19bff2da4'
+    HARDCODED_INDEX_KEY = 'f010c8ba-863a-11ee-a279-20c19bff2da4'
     # HARDCODED_INDEX_KEY = 'db9555b3-7cd6-11ee-ac8f-20c19bff2da4'
     APP_ID = os.getenv('APP_ID')
     APP_SECRET = os.getenv('APP_SECRET')
