@@ -1,5 +1,7 @@
 # doc-chat-server
 
+![apexChat](https://github.com/InnocentAnyaele/doc-chat-server/assets/55434969/d1e18a4a-df3a-408e-8d45-fb872adf283f)
+
 **About the project**
 
 Think about a business whose data can be fed into ChatGPT's LLM so that their chatbot can fully engage clients' queries and concerns through instagram message.
