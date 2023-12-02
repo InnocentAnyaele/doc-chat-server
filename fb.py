@@ -46,7 +46,7 @@ def getPSIDAndConversationID(page_id, page_token):
 def sendCustomerAMessage(page_id,response,page_token,psid, quick_replies = None):
     try:        
         url = f"{graph_url}/{page_id}/messages"
-        print ('this is the passed quick reply', quick_replies)
+        # print ('this is the passed quick reply', quick_replies)
         # quick_replies =  [
         #             {
         #                 "content_type": "text",
@@ -57,7 +57,7 @@ def sendCustomerAMessage(page_id,response,page_token,psid, quick_replies = None)
         #                 }
         #             }
         #         ]
-        print (url)
+        # print (url)
         
         if (quick_replies):    
             data = {
@@ -90,13 +90,13 @@ def sendCustomerAMessage(page_id,response,page_token,psid, quick_replies = None)
         }
 
         response = requests.post(url, json=data, headers=headers, params=params)
-        print(response.json())
+        # print(response.json())
     except Exception as e:
         raise 'Send Customer A Message Error'
 
 def findConversationWithASpecificUser(page_id,sender_id,page_token):
     try:
-        print('reached this function')
+        # print('reached this function')
         url = f'{graph_url}/{page_id}/conversations?platform=instagram&user_id={sender_id}&access_token={page_token}'
         # print (url)
         response = requests.get(url)
@@ -108,7 +108,7 @@ def findConversationWithASpecificUser(page_id,sender_id,page_token):
         # print (responseID)
         return (responseID)
     except Exception as e:
-        print ('findConversationWithASpecificUser exception', e)
+        # print ('findConversationWithASpecificUser exception', e)
         raise 
     
 
@@ -120,18 +120,18 @@ def getInformationAboutAMessage(message_id, page_token):
         url = f'{graph_url}/{message_id}?fields=id,from,to,message,created_time&access_token={page_token}'
         response = requests.get(url)
         responseJSON = response.json()
-        print ('message information', responseJSON)
+        # print ('message information', responseJSON)
         message = responseJSON['message']
         created_time = responseJSON['created_time']
         fromId = responseJSON['from']['id']
         toId = responseJSON['to']['data'][0]['id']
-        print ('check id type from', fromId)
-        print ('check id type to', toId)
+        # print ('check id type from', fromId)
+        # print ('check id type to', toId)
         if fromId == config.INSTAGRAM_ID:
-            print('equal ids', fromId, config.INSTAGRAM_ID)
+            # print('equal ids', fromId, config.INSTAGRAM_ID)
             sender = 'system'
         else:
-            print('not equal ids', fromId, config.INSTAGRAM_ID)
+            # print('not equal ids', fromId, config.INSTAGRAM_ID)
             sender = 'human'
         return {'sender': sender, 'message': message, 'created': created_time}
     except Exception as e:
@@ -140,11 +140,11 @@ def getInformationAboutAMessage(message_id, page_token):
 def getListOfAllMessagesInConversation(conversation_id, page_token):
     try:
         url = f'{graph_url}/{conversation_id}/?fields=messages{{message,from,to,created_time}}&access_token={page_token}'
-        print (url)
+        # print (url)
         response = requests.get(url)
         # print (response.json())
         responseJSON = response.json()
-        print('all conversation message response', responseJSON)
+        # print('all conversation message response', responseJSON)
         chatHistory = []
         messagesData = responseJSON['messages']['data']
         limit = 20
@@ -158,10 +158,10 @@ def getListOfAllMessagesInConversation(conversation_id, page_token):
             else:
                 chatHistory.append({'sender': 'human', 'message': message['message'], 'created_time': created_time })
             # data = getInformationAboutAMessage(messageID, page_token)            
-        print('new chat history', chatHistory[::-1])
+        # print('new chat history', chatHistory[::-1])
         return chatHistory[::-1]
     except Exception as e:
-        print ('getListOfAllMessagesWithASpecificUser exception', e)
+        # print ('getListOfAllMessagesWithASpecificUser exception', e)
         raise
 
 def getListOfAllMessageTextInConversation(conversation_id,page_token):
@@ -178,7 +178,7 @@ def getListOfAllMessageTextInConversation(conversation_id,page_token):
         # print (url)
         response = requests.get(url)
         responseJSON = response.json()
-        print ('chat response json', responseJSON)
+        # print ('chat response json', responseJSON)
         messages = responseJSON['messages']['data']
         # print ('messages', messages)
         chatHistory = []
@@ -193,7 +193,7 @@ def getListOfAllMessageTextInConversation(conversation_id,page_token):
                 chatHistory.append({'sender': 'system', 'message': message['message'], 'created_time': created_time })
             else:
                 chatHistory.append({'sender': 'human', 'message': message['message'], 'created_time': created_time })
-        print ('chat history', chatHistory[::-1])
+        # print ('chat history', chatHistory[::-1])
         return chatHistory[::-1]
     except Exception as e:
         print ('getListOfAllMessageTextInConversation exception', e)

@@ -53,17 +53,39 @@ sampleChatHistory =  [{'sender': 'user', 'message': 'What is my name'}, {'sender
 #     Human: {human_input}
 #     Chatbot:"""
     
+# template = """
+#     You are an AI assistant for a business specializing in coffee paste. Your primary goal is to provide support and assistance to customers based on extracted context from business data and conversation history. Focus on delivering accurate and relevant information related to the business. Do not generate answers that are not supported by the provided business context.
+    
+#     If the client expresses an intention to place an order, guide them to provide the following details: Name, Flavour, Quantity, Primary Contact, Secondary Contact, Delivery Address
+    
+#     If a recent order has been placed with all required details, your response should only strictly be a json with the order "name", "flavour", "quantity", "contact1", "contact2", "address"
+    
+#     Previous Conversation: {chat_history}    
+#     Business Information: {context}
+#     Human: {human_input}
+#     Chatbot:"""
+
 template = """
     You are an AI assistant for a business specializing in coffee paste. Your primary goal is to provide support and assistance to customers based on extracted context from business data and conversation history. Focus on delivering accurate and relevant information related to the business. Do not generate answers that are not supported by the provided business context.
     
     If the client expresses an intention to place an order, guide them to provide the following details: Name, Flavour, Quantity, Primary Contact, Secondary Contact, Delivery Address
     
-    If a recent order has been placed with all required details, your response should only strictly be a json with the order "name", "flavour", "quantity", "contact1", "contact2", "address"
+   If a recent order has been placed with all required details, your response should begin with ORDERPLACED4564 followed strictly by a JSON of "name", "flavour", "quantity", "contact1", "contact2", "address". Provide the information in the requested format.
     
     Previous Conversation: {chat_history}    
     Business Information: {context}
     Human: {human_input}
     Chatbot:"""
+    
+    
+    # Example:
+    # ORDERPLACED4564
+    # name: Innocent,
+    # flavour: Hazelnut,
+    # quantity: 4,
+    # contact1: 0557187667,
+    # contact2: 5454636456,
+    # address: Ghana
 
     
 #prompt template
@@ -77,18 +99,13 @@ embeddings = OpenAIEmbeddings(openai_api_key=config.OPENAI_API_KEY)
 def use_load_qa_chain(memory, prompt, query, docs):
     with get_openai_callback() as cb:
         # models
-        # gpt-4-1106-preview
-        # gpt-4
-        # gpt-4-32k
-        # gpt-4-0613
-        # gpt-4-32k-0613
-        # gpt-3.5-turbo-16k
-        # gpt-3.5-turbo
-        # chain = load_qa_chain(OpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY, model_name="gpt-3.5-turbo-16k"), chain_type="stuff", memory=memory, prompt=prompt)
-        chain = load_qa_chain(ChatOpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY, model_name="gpt-4"), chain_type="stuff", memory=memory, prompt=prompt, verbose=True)
+        models = ['gpt-3.5-turbo','gpt-3.5-turbo-16k','gpt-4','gpt-4-32k']
+        model = models[0]
+        #Please provide a valid OpenAI model name.Known models are: gpt-4, gpt-4-0314, gpt-4-completion, gpt-4-0314-completion, gpt-4-32k, gpt-4-32k-0314, gpt-4-32k-completion, gpt-4-32k-0314-completion, gpt-3.5-turbo, gpt-3.5-turbo-0301, text-ada-001, ada, text-babbage-001, babbage, text-curie-001, curie, text-davinci-003, text-davinci-002, code-davinci-002
+        chain = load_qa_chain(ChatOpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY, model_name=model), chain_type="stuff", memory=memory, prompt=prompt)
+        # chain = load_qa_chain(OpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY, model_name=model), chain_type="stuff", memory=memory, prompt=prompt)
         chain_output = chain({"input_documents":docs, "human_input": query}, return_only_outputs=False)
         # print ('conversation history', chain.memory.buffer)
-    
         # Print the entire chain information
         # print('Chain information:', chain_output)
         print('callback info', cb)

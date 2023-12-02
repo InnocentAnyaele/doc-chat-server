@@ -9,6 +9,7 @@ from fb import findConversationWithASpecificUser, getListOfAllMessageTextInConve
 from flask_cors import CORS
 import json
 import random
+import re
 
 
 def create_app(config = DevelopmentConfig()):
@@ -146,9 +147,9 @@ def create_app(config = DevelopmentConfig()):
         if request.method == 'POST':
             # print ('reached the webhook')
             body = request.get_json()
-            print ('this is the body',body)
+            # print ('this is the body',body)
             entry = body['entry']
-            print ('webhook entry', entry)
+            # print ('webhook entry', entry)
             # print (entry[0])
             
             try:
@@ -163,16 +164,16 @@ def create_app(config = DevelopmentConfig()):
                         # print ('reached parsing the entry')
                         # print ('sender ID', sender_id)
                         # print ('recipient ID', recipient_id)
-                        print ('messsage_text', message_text)
+                        # print ('messsage_text', message_text)
                         
                         #check for quick reply in message
                         if "quick_reply" in message:
                             quick_reply_payload = message['quick_reply']['payload']
-                            print ('quick reply payload', quick_reply_payload)
+                            # print ('quick reply payload', quick_reply_payload)
                             quick_reply_payload = quick_reply_payload.replace("'",'"')
                             quick_reply_payload = json.loads(quick_reply_payload)
-                            print ('checking json', quick_reply_payload)
-                            print ('checking json', quick_reply_payload["type"])
+                            # print ('checking json', quick_reply_payload)
+                            # print ('checking json', quick_reply_payload["type"])
                             if quick_reply_payload["type"] == 'confirm_order':
                                     orderID = quick_reply_payload['order']['orderID']
                                     orderConfirmedResponse = f"Your order has been placed with the id of {orderID}. Select your payment method"
@@ -202,20 +203,93 @@ def create_app(config = DevelopmentConfig()):
                                 pay_with_web_response = "Pay through our website example.com"
                                 sendCustomerAMessage(app.config['PAGE_ID'],pay_with_web_response,app.config['PAGE_ACCESS_TOKEN'],sender_id)                                
                         else:
-                            print ('no quick reply')                            
+                            # print ('no quick reply')                            
                             conversation_id = findConversationWithASpecificUser(app.config['PAGE_ID'],sender_id,app.config['PAGE_ACCESS_TOKEN'])
                             chatHistory = getListOfAllMessageTextInConversation(conversation_id,app.config['PAGE_ACCESS_TOKEN'])
                             # chatHistory = getListOfAllMessagesInConversation(conversation_id,app.config['PAGE_ACCESS_TOKEN'])
                             output = queryIndexWithChromaFromPersistent(app.config['HARDCODED_INDEX_KEY'],message_text,chatHistory)
                             print ('this is the AI response', output)
                             
+                            # def get_order_details(output):
+                            #     try:
+                            #         print ('processing output', output)
+                            #         if len(output) > 15 and output[:15] == 'ORDERPLACED4564':
+                            #             print ('json order part', output[16:])
+                            #             json_order = json.loads(output[16:])
+                            #             print ('json order part after processing', json_order)
+                            #             print ('name', json_order['name'])
+                            #             return (True, json_order)
+                            #     except Exception as e:
+                            #         return (False, {})
+                                
+                                 
+                            def validate_order(output):
+                                try:
+                                    print ('reached get order_details', output)
+                                    if output.startswith('ORDERPLACED4564'):
+                                        full_order_name = {
+                                            "name": "Name",
+                                            "flavour": "Flavour",
+                                            "quantity": "Quantity",
+                                            "contact1": "Primary Contact",
+                                            "contact2": "Secondary Contact",
+                                            "address" : "Address" 
+                                        }
+                                        pattern = re.compile(r'{.*}', re.DOTALL)
+                                        matches = pattern.findall(output)
+                                        json_order = json.loads(matches[0])
+                                        missing_details = []
+                                        print ('json order from reg output', json_order)
+                                        required_keys = ["name", "flavour", "quantity", "contact1", "contact2", "address"]
+                                        for key in required_keys:
+                                            if key not in json_order:
+                                                return False
+                                            else:
+                                                # do extra validations here
+                                                if not json_order[key]:
+                                                    missing_details.append(full_order_name[key])
+                                        
+                                        print ('missing details', missing_details)
+                                        if len(missing_details) > 0:
+                                            details = ''
+                                            for i in range(len(missing_details)):
+                                                detail = missing_details[i]
+                                                if i == len(missing_details) - 1:
+                                                    details = details + f' {detail}.'
+                                                else:
+                                                    details = details + f' {detail},'
+                                                    
+                                            msg = f'Your order is missing the following details:{details}'
+                                            print ('missing details message', msg)
+                                            response = {
+                                                'status': 'incomplete',
+                                                'msg': msg
+                                            }
+                                            return response
+                                        else:
+                                            response = {
+                                                'status': 'complete',
+                                                'msg': json_order
+                                            }
+                                            return response
+                                    else:
+                                        return False
+                                except Exception as e:
+                                    print (e)
+                                    return False
+                                
                             #process response
                             def process_response():
-                                if output[0] == '{':
-                                    json_order = json.loads(output)
+                                # return
+                                validate_output = validate_order(output)
+                                if not validate_output:
+                                    sendCustomerAMessage(app.config['PAGE_ID'],output,app.config['PAGE_ACCESS_TOKEN'],sender_id)
+                                elif validate_output['status'] == 'complete':
+                                    # if output[0] == '{':
+                                    json_order = validate_output['msg']
                                     orderID = random.randint(100000, 999999)
                                     json_order["orderID"] = orderID
-                                    print ('JSON Order', json_order)
+                                    # print ('JSON Order', json_order)
                                     order_response = f"Kindly select the reply to confirm your order."
                                     #temporary save order ID and order data - with status of confirmed
                                     # payment_response = "Order sent. Your order ID is 18732. You can either pay to our bank or website (example.com). Bank details are NAME - Montado (pvt) ltd, ACCOUNT - 047010020567, BANK - HNB Biyagama. Kindly use your ID as reference."
@@ -231,8 +305,35 @@ def create_app(config = DevelopmentConfig()):
                                                 }
                                             ]
                                     sendCustomerAMessage(app.config['PAGE_ID'],order_response,app.config['PAGE_ACCESS_TOKEN'],sender_id,quick_reply)
-                                else:
-                                    sendCustomerAMessage(app.config['PAGE_ID'],output,app.config['PAGE_ACCESS_TOKEN'],sender_id)
+                                elif validate_output['status'] == 'incomplete':
+                                    msg = validate_output['msg']
+                                    sendCustomerAMessage(app.config['PAGE_ID'],msg,app.config['PAGE_ACCESS_TOKEN'],sender_id)
+                                # if validate_output and validate_output['status'] == 'complete':
+                                # # if output[0] == '{':
+                                #     json_order = validate_output['msg']
+                                #     orderID = random.randint(100000, 999999)
+                                #     json_order["orderID"] = orderID
+                                #     # print ('JSON Order', json_order)
+                                #     order_response = f"Kindly select the reply to confirm your order."
+                                #     #temporary save order ID and order data - with status of confirmed
+                                #     # payment_response = "Order sent. Your order ID is 18732. You can either pay to our bank or website (example.com). Bank details are NAME - Montado (pvt) ltd, ACCOUNT - 047010020567, BANK - HNB Biyagama. Kindly use your ID as reference."
+                                #     payload = {
+                                #         "type": "confirm_order",
+                                #         "order": json_order
+                                #     }
+                                #     quick_reply = [
+                                #                 {
+                                #                     "content_type": "text",
+                                #                     "title": f"Confirm order",
+                                #                     "payload": f"{payload}"
+                                #                 }
+                                #             ]
+                                #     sendCustomerAMessage(app.config['PAGE_ID'],order_response,app.config['PAGE_ACCESS_TOKEN'],sender_id,quick_reply)
+                                # elif validate_output and validate_output['status'] == 'incomplete':
+                                #     msg = validate_output['msg']
+                                #     sendCustomerAMessage(app.config['PAGE_ID'],msg,app.config['PAGE_ACCESS_TOKEN'],sender_id)
+                                # else:
+                                #     sendCustomerAMessage(app.config['PAGE_ID'],output,app.config['PAGE_ACCESS_TOKEN'],sender_id)
                             process_response()
                         return make_response('EVENT_RECEIVED', 200)
                 else:
