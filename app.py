@@ -226,7 +226,7 @@ def create_app(config = DevelopmentConfig()):
                             def validate_order(output):
                                 try:
                                     print ('reached get order_details', output)
-                                    if output.startswith('ORDERPLACED4564'):
+                                    if output.startswith('0RD3R9LAC3D'):
                                         full_order_name = {
                                             "name": "Name",
                                             "flavour": "Flavour",
@@ -290,7 +290,7 @@ def create_app(config = DevelopmentConfig()):
                                     orderID = random.randint(100000, 999999)
                                     json_order["orderID"] = orderID
                                     # print ('JSON Order', json_order)
-                                    order_response = f"Kindly select the reply to confirm your order."
+                                    order_response = f"Select button to confirm your order. Order details are {json_order['name']}, {json_order['flavour']}, {json_order['quantity']}, {json_order['contact1']}, {json_order['contact2']}, {json_order['address']}"
                                     #temporary save order ID and order data - with status of confirmed
                                     # payment_response = "Order sent. Your order ID is 18732. You can either pay to our bank or website (example.com). Bank details are NAME - Montado (pvt) ltd, ACCOUNT - 047010020567, BANK - HNB Biyagama. Kindly use your ID as reference."
                                     payload = {
@@ -321,7 +321,7 @@ def create_app(config = DevelopmentConfig()):
                                 #         "type": "confirm_order",
                                 #         "order": json_order
                                 #     }
-                                #     quick_reply = [
+                                #     quick_reply = 
                                 #                 {
                                 #                     "content_type": "text",
                                 #                     "title": f"Confirm order",

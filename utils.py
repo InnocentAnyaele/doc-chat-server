@@ -70,7 +70,7 @@ template = """
     
     If the client expresses an intention to place an order, guide them to provide the following details: Name, Flavour, Quantity, Primary Contact, Secondary Contact, Delivery Address
     
-   If a recent order has been placed with all required details, your response should begin with ORDERPLACED4564 followed strictly by a JSON of "name", "flavour", "quantity", "contact1", "contact2", "address". Provide the information in the requested format.
+   If a recent order has been placed with all required details, your response should begin with 0RD3R9LAC3D followed strictly by a JSON of "name", "flavour", "quantity", "contact1", "contact2", "address". Provide the information in the requested format.
     
     Previous Conversation: {chat_history}    
     Business Information: {context}
