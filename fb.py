@@ -59,27 +59,64 @@ def sendCustomerAMessage(page_id,response,page_token,psid, quick_replies = None)
         #         ]
         # print (url)
         
-        if (quick_replies):    
-            data = {
-                "recipient": {
-                    "id": psid
-                },
-                "messaging_type": "RESPONSE",
-                "message": {
-                    "text": response,
-                    "quick_replies": quick_replies
-                }
+        default_quick_replies = [
+            {
+                "content_type": "text",
+                "title": "About the business",
+                "payload": "{'type': 'about_business'}"
+            },
+            {
+                "content_type": "text",
+                "title": "Place an order",
+                "payload": "{'type': 'place_order'}"
+            },
+            {
+                "content_type": "text",
+                "title": "Speak to agent",
+                "payload": "{'type': 'speak_agent'}"
+            },
+            {
+                "content_type": "text",
+                "title": "Your products?",
+                "payload": "{'type': 'about_product'}"
             }
-        else:
-            data = {
-                "recipient": {
-                    "id": psid
-                },
-                "messaging_type": "RESPONSE",
-                "message": {
-                    "text": response,
-                }
-            }
+        ]
+        
+        if quick_replies and type(quick_replies) is list:
+            default_quick_replies = quick_replies + default_quick_replies
+        
+        data = {
+        "recipient": {
+            "id": psid
+        },
+        "messaging_type": "RESPONSE",
+        "message": {
+            "text": response,
+            "quick_replies": default_quick_replies
+        }
+         }  
+        
+        # if (quick_replies):    
+        #     data = {
+        #         "recipient": {
+        #             "id": psid
+        #         },
+        #         "messaging_type": "RESPONSE",
+        #         "message": {
+        #             "text": response,
+        #             "quick_replies": quick_replies
+        #         }
+        #     }
+        # else:
+        #     data = {
+        #         "recipient": {
+        #             "id": psid
+        #         },
+        #         "messaging_type": "RESPONSE",
+        #         "message": {
+        #             "text": response,
+        #         }
+        #     }
             
 
         headers = {
@@ -92,6 +129,7 @@ def sendCustomerAMessage(page_id,response,page_token,psid, quick_replies = None)
         response = requests.post(url, json=data, headers=headers, params=params)
         # print(response.json())
     except Exception as e:
+        print (e)
         raise 'Send Customer A Message Error'
 
 def findConversationWithASpecificUser(page_id,sender_id,page_token):

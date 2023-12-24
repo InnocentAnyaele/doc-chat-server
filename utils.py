@@ -10,7 +10,7 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 import pinecone
 from langchain.vectorstores import Pinecone
 from langchain.prompts import PromptTemplate
-from langchain.memory import ConversationBufferMemory
+from langchain.memory import ConversationBufferMemory, ConversationSummaryMemory, ConversationSummaryBufferMemory, ChatMessageHistory
 from langchain.chains.question_answering import load_qa_chain
 from langchain.llms import OpenAI
 from langchain.chat_models import ChatOpenAI
@@ -20,6 +20,8 @@ from langchain.vectorstores.redis import Redis
 from langchain.callbacks import get_openai_callback
 import redis
 import uuid
+from datetime import datetime, timezone
+from langchain.prompts.few_shot import FewShotPromptTemplate
 config = Config()
 
 # sampleData = './data/SamplePDF.pdf'
@@ -29,6 +31,8 @@ sampleData = './data/Coffee.pdf'
 
 # redisLocalHost = 'redis://localhost:6379'
 redisLocalHost = 'redis://127.0.0.1:6379'
+
+models = ['gpt-3.5-turbo','gpt-3.5-turbo-16k','gpt-4','gpt-4-32k']
 
 sampleChatHistory =  [{'sender': 'user', 'message': 'What is my name'}, {'sender': 'AI', 'message': 'Your name is Innocent.'}]
 # template = """
@@ -64,6 +68,9 @@ sampleChatHistory =  [{'sender': 'user', 'message': 'What is my name'}, {'sender
 #     Business Information: {context}
 #     Human: {human_input}
 #     Chatbot:"""
+
+
+
 
 template = """
     You are an AI assistant for a business specializing in coffee paste. Your primary goal is to provide support and assistance to customers based on extracted context from business data and conversation history. Focus on delivering accurate and relevant information related to the business. Do not generate answers that are not supported by the provided business context.
@@ -102,15 +109,43 @@ def use_load_qa_chain(memory, prompt, query, docs):
         models = ['gpt-3.5-turbo','gpt-3.5-turbo-16k','gpt-4','gpt-4-32k']
         model = models[0]
         #Please provide a valid OpenAI model name.Known models are: gpt-4, gpt-4-0314, gpt-4-completion, gpt-4-0314-completion, gpt-4-32k, gpt-4-32k-0314, gpt-4-32k-completion, gpt-4-32k-0314-completion, gpt-3.5-turbo, gpt-3.5-turbo-0301, text-ada-001, ada, text-babbage-001, babbage, text-curie-001, curie, text-davinci-003, text-davinci-002, code-davinci-002
-        chain = load_qa_chain(ChatOpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY, model_name=model), chain_type="stuff", memory=memory, prompt=prompt)
+        chain = load_qa_chain(ChatOpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY, model_name=config.MODEL), chain_type="stuff", memory=memory, prompt=prompt, verbose=False)
         # chain = load_qa_chain(OpenAI(temperature=0, openai_api_key=config.OPENAI_API_KEY, model_name=model), chain_type="stuff", memory=memory, prompt=prompt)
         chain_output = chain({"input_documents":docs, "human_input": query}, return_only_outputs=False)
-        # print ('conversation history', chain.memory.buffer)
+        print ('conversation history', chain.memory.buffer)
+        # print ('conversation memory', chain.memory)
         # Print the entire chain information
         # print('Chain information:', chain_output)
+        save_to_summary(chain.memory.buffer, 'system', True)
         print('callback info', cb)
+        # save_variable_to_file(chain.memory.buffer, 'summary.txt')        
         return chain_output['output_text']
-
+    
+def save_to_summary(msg, sender, summary_provided = False):
+    return # remove to use summary
+    if summary_provided:
+        save_variable_to_file(msg, 'summary.txt')
+    else:
+        print('saving to summary.....')
+        previous_summary = read_variable_from_file('summary.txt')
+        print('previous summary', previous_summary)
+        if not previous_summary:
+            previous_summary = ""
+        history = ChatMessageHistory()
+        if sender == "system":
+            history.add_ai_message(msg)
+        elif sender == "human":
+            history.add_user_message(msg)
+        memory = ConversationSummaryMemory(
+            llm=ChatOpenAI(temperature=0, model_name=config.MODEL),
+            chat_memory=history,
+            # buffer=previous_summary,
+            return_messages = True,
+        )
+        new_summary = memory.predict_new_summary(memory.chat_memory.messages, previous_summary)
+        print ('new summary', new_summary)
+        save_variable_to_file(new_summary, 'summary.txt')
+            
 
 def createChunkFromPdf(path):
     loader = UnstructuredPDFLoader(path)
@@ -133,8 +168,27 @@ def createChunkFromTxt(path):
     return texts
 
 
-def createMemoryChatHistory(chatHistory):
+def ttl_expire(chatHistory):
+    if len(chatHistory) == 0:
+        return True
+    time_string = chatHistory[-1]['created_time']
+    parsed_time = datetime.strptime(time_string, '%Y-%m-%dT%H:%M:%S%z')
+    parsed_time = parsed_time.replace(tzinfo=timezone.utc)
+    print ('last message date', parsed_time)
+    current_time = datetime.now(timezone.utc)
+    print ('current date', current_time)
+    time_difference = current_time - parsed_time
+    hours_passed = time_difference.total_seconds() / 3600
+    print ('hours passed', hours_passed)
+    days_passed = time_difference.days
+    print ('days passed', days_passed)
+    if days_passed > 7:
+        return True
+    return False
+
+def createConversationBufferMemory(chatHistory):
     memory = ConversationBufferMemory(memory_key="chat_history", input_key="human_input")
+    print ('utils ->', chatHistory)
     for chat in chatHistory:
         chat_message = chat['message']
         chat_sender = chat['sender']
@@ -152,10 +206,62 @@ def createMemoryChatHistory(chatHistory):
         #         memory.chat_memory.add_user_message(chat_message)
         #     else:
         #         memory.chat_memory.add_ai_message(chat_message)
-                
-                
     return memory
 
+def useConversationSummary(chatHistory):
+    previous_summary = read_variable_from_file('summary.txt')
+    if (ttl_expire(chatHistory) or not previous_summary): # or previous summary empty
+    # if (False): # or previous summary empty
+        # building memory
+        history = ChatMessageHistory()
+        for chat in chatHistory:
+            if chat['sender'] == 'human':
+                # memory.save_context({"input": chat['message']})
+                history.add_user_message(chat['message'])
+            else:
+                # memory.save_context({"output": chat['message']})
+                history.add_ai_message(chat['message'])
+        memory = ConversationSummaryMemory(
+            llm=ChatOpenAI(temperature=0, model_name=config.MODEL),
+            chat_memory=history,
+            return_messages = True,
+        )
+        # print ('memory buffer', memory.buffer)
+        messages = memory.chat_memory.messages
+        new_summary = memory.predict_new_summary(messages, "") 
+        print ('new_summary', new_summary)
+        new_memory = ConversationSummaryMemory(
+        llm=ChatOpenAI(temperature=0, model_name=config.MODEL),
+        buffer=new_summary,
+        memory_key="chat_history", 
+        input_key="human_input"
+    )
+        return new_memory
+        # return 
+        # return memory
+    else:
+        memory = ConversationSummaryMemory(
+        llm=ChatOpenAI(temperature=0, model_name=config.MODEL),
+        buffer=previous_summary,
+        memory_key="chat_history", 
+        input_key="human_input"
+    )
+        # return 
+        return memory
+
+def read_variable_from_file(filename):
+    with open(filename, 'r') as file:
+        content = file.read()
+        return content.strip()
+    
+def save_variable_to_file(variable, filename):
+    with open(filename, 'w') as file:
+        file.write(str(variable))
+
+def createMemoryChatHistory(chatHistory):
+    return createConversationBufferMemory(chatHistory)
+    # return useConversationSummary(chatHistory)
+    
 
 # PINECONE
 

@@ -2,6 +2,8 @@ from dotenv import load_dotenv
 load_dotenv()
 import os
 
+models = ['gpt-3.5-turbo','gpt-3.5-turbo-16k','gpt-4','gpt-4-32k']
+
 class Config():
     # BEARER_TOKEN = 'Bearer SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
     BEARER_TOKEN = os.getenv('BEARER_TOKEN')
@@ -19,6 +21,7 @@ class Config():
     # HARDCODED_INDEX_KEY = 'db9555b3-7cd6-11ee-ac8f-20c19bff2da4'
     APP_ID = os.getenv('APP_ID')
     APP_SECRET = os.getenv('APP_SECRET')
+    MODEL = models[0]
 
     
 class DevelopmentConfig(Config):
